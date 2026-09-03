@@ -1,20 +1,24 @@
 #!/bin/bash
+
 #
-# https://github.com/P3TERX/Actions-OpenWrt
-# File name: diy-part2.sh
-# Description: OpenWrt DIY script part 2 (After Update feeds)
+# Remove WiFi packages from Linksys device definitions
 #
-# Copyright (c) 2019-2024 P3TERX <https://p3terx.com>
-#
-# This is free software, licensed under the MIT License.
-# See /LICENSE for more information.
+# WRT1900ACS is being used as a wired audio-network router.
+# WiFi is intentionally disabled.
 #
 
-# Modify default IP
-#sed -i 's/192.168.1.1/192.168.50.5/g' package/base-files/files/bin/config_generate
 
-# Modify default theme
-#sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci/Makefile
+#
+# Remove generic Linksys WiFi packages
+#
 
-# Modify hostname
-#sed -i 's/OpenWrt/P3TERX-Router/g' package/base-files/files/bin/config_generate
+sed -i '/define Device\/linksys$/,/^endef$/ s/kmod-mwlwifi wpad-basic-mbedtls//' \
+    target/linux/mvebu/image/cortexa9.mk
+
+
+#
+# Remove WRT1900ACS-specific WiFi firmware
+#
+
+sed -i '/define Device\/linksys_wrt1900acs$/,/^endef$/ s/ mwlwifi-firmware-88w8864//' \
+    target/linux/mvebu/image/cortexa9.mk
