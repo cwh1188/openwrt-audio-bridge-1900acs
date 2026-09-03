@@ -1,21 +1,19 @@
 #!/bin/bash
+set -e
 
 #
-# Remove unused x86 patch
+# Remove unrelated IEI PUZZLE MCU patches
+#
+# These patches are not for Linksys WRT1900ACS.
+# They caused the previous kernel patch conflict.
+#
+
+find target/linux/mvebu -type f \
+    \( -iname '*wt61p803*puzzle*.patch' -o -iname '*iei*wt61p803*.patch' \) \
+    -delete
+
+#
+# Remove unrelated x86 patch
 #
 
 rm -f target/linux/x86/patches/501-add-dmi-info-for-some-x86-devices.patch
-
-
-#
-# Remove unused IEI WT61P803 PUZZLE MCU patches
-#
-# These patches are for IEI PUZZLE hardware,
-# not for Linksys WRT1900ACS.
-# They also cause the current Linux 6.6 patch conflict.
-#
-
-find target/linux/mvebu/patches-6.6 \
-    -type f \
-    -iname '*wt61p803*puzzle*.patch' \
-    -delete
