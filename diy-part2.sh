@@ -22,3 +22,6 @@ sed -i '/define Device\/linksys$/,/^endef$/ s/kmod-mwlwifi wpad-basic-mbedtls//'
 
 sed -i '/define Device\/linksys_wrt1900acs$/,/^endef$/ s/ mwlwifi-firmware-88w8864//' \
     target/linux/mvebu/image/cortexa9.mk
+
+# 开启高级重启 (AB分区切换) 插件
+echo "CONFIG_PACKAGE_luci-app-advanced-reboot=y" >> .config
