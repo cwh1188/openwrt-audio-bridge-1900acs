@@ -1,36 +1,42 @@
 #!/bin/bash
+
 set -e
 
+echo "=============================================="
+echo " DIY PART 1"
+echo " OpenWrt 23.05.6 / WRT1900ACS"
+echo "=============================================="
+
 #
-# Remove unrelated IEI PUZZLE MCU patches
+# Remove unrelated IEI PUZZLE MCU patches.
 #
-# These patches are not for Linksys WRT1900ACS.
-# They caused the previous kernel patch conflict.
+# These patches are for IEI Puzzle hardware and are
+# unrelated to Linksys WRT1900ACS.
 #
 
 find target/linux/mvebu -type f \
-    \( -iname '*wt61p803*puzzle*.patch' -o -iname '*iei*wt61p803*.patch' \) \
+    \( \
+        -iname '*wt61p803*puzzle*.patch' \
+        -o -iname '*iei*wt61p803*.patch' \
+    \) \
     -delete
 
 #
-# Remove unrelated x86 patch
+# Remove unrelated x86 patch if present.
 #
 
-rm -f target/linux/x86/patches/501-add-dmi-info-for-some-x86-devices.patch
+rm -f \
+    target/linux/x86/patches/501-add-dmi-info-for-some-x86-devices.patch
 
 #
-# Hide LuCI Status menu only.
+# IMPORTANT
 #
-# Keep the Run #8 package set otherwise unchanged.
-# luci-mod-admin-full depends on luci-mod-status, so simply
-# setting CONFIG_PACKAGE_luci-mod-status=n cannot remove it.
-# Removing only its menu definition leaves the underlying
-# package dependency intact while removing the "状态" menu.
+# Do NOT modify LuCI Status.
+#
+# Run #8 kept the Status menu.
+# Run #10 intentionally keeps it unchanged.
 #
 
-STATUS_MENU="feeds/luci/modules/luci-mod-status/root/usr/share/luci/menu.d/luci-mod-status.json"
-
-if [ -f "$STATUS_MENU" ]; then
-    rm -f "$STATUS_MENU"
-fi
-
+echo ""
+echo "DIY PART 1 completed."
+echo ""
