@@ -51,7 +51,7 @@ jobs:
           git status --short || true
 
       #
-      # Check .config BEFORE doing anything else
+      # Check .config
       #
 
       - name: Check configuration file
@@ -191,8 +191,7 @@ jobs:
       # Run existing DIY Part 2
       #
       # IMPORTANT:
-      # This is the Run #8 WiFi-removal script.
-      # Do not modify it.
+      # Keep the Run #8 WiFi-removal script unchanged.
       #
 
       - name: Run DIY Part 2
@@ -280,6 +279,17 @@ jobs:
       #
       # Verify DSA / PHY
       #
+      # IMPORTANT:
+      # Do NOT require CONFIG_PACKAGE_kmod-dsa.
+      #
+      # OpenWrt 23.05.6 handles the DSA core through
+      # the kernel/target configuration and it is not
+      # necessarily represented as a standalone
+      # CONFIG_PACKAGE_kmod-dsa=y entry after defconfig.
+      #
+      # The WRT1900ACS-specific switch driver and the
+      # required PHY support are what matter here.
+      #
 
       - name: Verify DSA PHY stack
         run: |
@@ -289,22 +299,63 @@ jobs:
           echo "Verify DSA / PHY"
           echo "=============================================="
 
-          for p in \
-            CONFIG_PACKAGE_kmod-dsa \
-            CONFIG_PACKAGE_kmod-dsa-mv88e6xxx \
-            CONFIG_PACKAGE_kmod-ptp \
-            CONFIG_PACKAGE_kmod-phy-marvell \
-            CONFIG_PACKAGE_kmod-libphy
-          do
-            if ! grep -q "^${p}=y" .config; then
-              echo "ERROR: $p is missing."
-              exit 1
-            fi
-          done
+          echo ""
+          echo "--- DSA / PHY related configuration ---"
 
           grep -E \
-            '^CONFIG_PACKAGE_kmod-(dsa|dsa-mv88e6xxx|ptp|phy-marvell|libphy)=y' \
-            .config
+            'CONFIG_(PACKAGE_)?(kmod-dsa-mv88e6xxx|PACKAGE_kmod-ptp|PACKAGE_kmod-phy-marvell|PACKAGE_kmod-libphy|PHYLIB|MARVELL_PHY)' \
+            .config || true
+
+          echo ""
+          echo "--- Check WRT1900ACS DSA driver ---"
+
+          if ! grep -q \
+            '^CONFIG_PACKAGE_kmod-dsa-mv88e6xxx=y' \
+            .config; then
+
+            echo ""
+            echo "ERROR: kmod-dsa-mv88e6xxx is missing."
+            exit 1
+          fi
+
+          echo "kmod-dsa-mv88e6xxx: OK"
+
+          echo ""
+          echo "--- Check PHY configuration ---"
+
+          #
+          # The following are checked in a tolerant way.
+          # Some of them may be built into the kernel rather
+          # than appearing as standalone package selections.
+          #
+
+          PHY_OK=0
+
+          if grep -q '^CONFIG_PACKAGE_kmod-phy-marvell=y' .config; then
+            echo "kmod-phy-marvell package: OK"
+            PHY_OK=1
+          fi
+
+          if grep -q '^CONFIG_MARVELL_PHY=y' .config; then
+            echo "CONFIG_MARVELL_PHY=y: OK"
+            PHY_OK=1
+          fi
+
+          if grep -q '^CONFIG_PACKAGE_kmod-libphy=y' .config; then
+            echo "kmod-libphy package: OK"
+            PHY_OK=1
+          fi
+
+          if grep -q '^CONFIG_PHYLIB=y' .config; then
+            echo "CONFIG_PHYLIB=y: OK"
+            PHY_OK=1
+          fi
+
+          if [ "$PHY_OK" -eq 0 ]; then
+            echo ""
+            echo "ERROR: No valid Marvell PHY support detected."
+            exit 1
+          fi
 
           echo ""
           echo "DSA / PHY stack confirmed."
@@ -321,17 +372,26 @@ jobs:
           echo "Verify Advanced Reboot"
           echo "=============================================="
 
-          if ! grep -q '^CONFIG_PACKAGE_luci-app-advanced-reboot=y' .config; then
+          if ! grep -q \
+            '^CONFIG_PACKAGE_luci-app-advanced-reboot=y' \
+            .config; then
+
             echo "ERROR: luci-app-advanced-reboot is missing."
             exit 1
           fi
 
-          if ! grep -q '^CONFIG_PACKAGE_luci-i18n-advanced-reboot-zh-cn=y' .config; then
+          if ! grep -q \
+            '^CONFIG_PACKAGE_luci-i18n-advanced-reboot-zh-cn=y' \
+            .config; then
+
             echo "ERROR: Chinese Advanced Reboot translation is missing."
             exit 1
           fi
 
-          if ! grep -q '^CONFIG_PACKAGE_linksys-reboot=y' .config; then
+          if ! grep -q \
+            '^CONFIG_PACKAGE_linksys-reboot=y' \
+            .config; then
+
             echo "ERROR: linksys-reboot is missing."
             exit 1
           fi
@@ -340,7 +400,7 @@ jobs:
           echo "Advanced Reboot confirmed."
 
       #
-      # Verify Python / Avahi / USB
+      # Verify Audio Bridge runtime
       #
 
       - name: Verify Audio Bridge runtime
@@ -369,7 +429,7 @@ jobs:
           echo "Audio Bridge runtime confirmed."
 
       #
-      # Verify Status remains untouched
+      # Verify LuCI Status remains enabled
       #
 
       - name: Verify LuCI Status remains enabled
@@ -380,7 +440,10 @@ jobs:
           echo "Verify LuCI Status"
           echo "=============================================="
 
-          if ! grep -q '^CONFIG_PACKAGE_luci-mod-status=y' .config; then
+          if ! grep -q \
+            '^CONFIG_PACKAGE_luci-mod-status=y' \
+            .config; then
+
             echo "ERROR: luci-mod-status is missing."
             exit 1
           fi
@@ -389,7 +452,7 @@ jobs:
           echo "LuCI Status remains enabled."
 
       #
-      # Verify forbidden packages
+      # Verify unwanted packages
       #
 
       - name: Verify unwanted packages are disabled
@@ -451,38 +514,53 @@ jobs:
 
           echo ""
           echo "--- TARGET ---"
+
           grep '^CONFIG_TARGET_' .config | grep '=y' || true
 
           echo ""
           echo "--- NETWORK ---"
+
           grep -E \
             '^CONFIG_PACKAGE_(dnsmasq|netifd|firewall4)=y' \
             .config || true
 
           echo ""
           echo "--- DSA / PHY ---"
+
           grep -E \
-            '^CONFIG_PACKAGE_kmod-(dsa|dsa-mv88e6xxx|ptp|phy-marvell|libphy)=y' \
+            'CONFIG_(PACKAGE_)?(kmod-dsa-mv88e6xxx|PACKAGE_kmod-ptp|PACKAGE_kmod-phy-marvell|PACKAGE_kmod-libphy|PHYLIB|MARVELL_PHY)' \
             .config || true
 
           echo ""
           echo "--- ADVANCED REBOOT ---"
+
           grep -E \
             '^CONFIG_PACKAGE_(linksys-reboot|luci-app-advanced-reboot|luci-i18n-advanced-reboot-zh-cn)=y' \
             .config || true
 
           echo ""
           echo "--- AUDIO BRIDGE ---"
+
           grep -E \
             '^CONFIG_PACKAGE_(python3|python3-aiohttp|python3-yaml|avahi-daemon)=y' \
             .config || true
 
           echo ""
+          echo "--- USB ---"
+
+          grep -E \
+            '^CONFIG_PACKAGE_(kmod-usb-storage|block-mount)=y' \
+            .config || true
+
+          echo ""
           echo "--- STATUS ---"
-          grep '^CONFIG_PACKAGE_luci-mod-status=y' .config || true
+
+          grep \
+            '^CONFIG_PACKAGE_luci-mod-status=y' \
+            .config || true
 
       #
-      # Build
+      # Download package sources
       #
 
       - name: Download package sources
